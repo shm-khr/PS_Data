@@ -1,0 +1,1 @@
+print(input()+('es' if s[-1] == 's' else 's'))

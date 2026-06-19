@@ -1,0 +1,1 @@
+document.write( s.lastIndexOf("Z")-s.indexOf("A")+1);
