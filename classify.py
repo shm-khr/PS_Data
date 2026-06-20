@@ -62,13 +62,13 @@ for lang in os.listdir(RAW_DIR):
             with open(ps_path, 'r', encoding='utf-8', errors='replace') as f:
                 problem_statement = f.read().strip()
 
-            # read reference accepted solution
+            # read reference accepted solution — skip problem entirely if missing
             ref_path = os.path.join(problem_dir, f'reference_accepted{ext}')
             if not os.path.exists(ref_path):
-                reference = "No reference solution available."
-            else:
-                with open(ref_path, 'r', encoding='utf-8', errors='replace') as f:
-                    reference = f.read().strip()
+                print(f"  Skipping {lang}/{tier}/{problem_id} — no reference solution")
+                continue
+            with open(ref_path, 'r', encoding='utf-8', errors='replace') as f:
+                reference = f.read().strip()
 
             # load existing classifications if any (resume on crash)
             out_path = os.path.join(problem_dir, 'classifications.json')
