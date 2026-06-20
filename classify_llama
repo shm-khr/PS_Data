@@ -1,0 +1,200 @@
+import os
+import json
+import time
+from dotenv import load_dotenv
+load_dotenv()
+
+from huggingface_hub import InferenceClient
+
+RAW_DIR   = r"C:\Users\gujjw\Desktop\eval\PS_Data\codenet_raw"
+DRY_RUN   = True   # set to False when ready for real run
+MAX_CALLS = 10     # bump to 2000 for full run
+
+MODEL_NAME = "meta-llama/Llama-3.1-8B-Instruct"
+
+LANG_EXT = {
+    'Python':     '.py',
+    'C++':        '.cpp',
+    'Java':       '.java',
+    'JavaScript': '.js'
+}
+
+# Tier name mapping — your folders use easy/medium/hard
+TIER_MAP = {
+    'easy':   'tier1',
+    'medium': 'tier2',
+    'hard':   'tier3',
+}
+
+PROMPT_TEMPLATE = """You are a programming expert. Given a problem statement, a correct reference solution, and an incorrect student submission, classify the type of error into exactly one of these three categories:
+
+1. off_by_one - The logic is almost correct but has a boundary/index/range error (e.g. < instead of <=, starting index wrong, loop runs one too many or too few times). This includes Time Limit Exceeded caused by a minor boundary mistake.
+2. logic_error - The overall approach or algorithm is fundamentally wrong or misunderstands the problem.
+3. partial_solution - The solution is incomplete, missing major cases, or only solves part of the problem.
+
+Problem Statement:
+{problem_statement}
+
+Correct Reference Solution ({language}):
+{reference}
+
+Incorrect Student Submission ({language}):
+{code}
+
+Reply with exactly one of: off_by_one, logic_error, partial_solution
+No explanation, no punctuation, just the category name."""
+
+
+def get_client():
+    token = os.environ.get("HF_TOKEN")
+    if not token:
+        raise EnvironmentError(
+            "HF_TOKEN not found. Make sure your .env file has: HF_TOKEN=hf_..."
+        )
+    return InferenceClient(model=MODEL_NAME, token=token)
+
+
+def classify(client, prompt: str) -> str:
+    """Send prompt to Llama and return one of the three category strings."""
+    response = client.chat.completions.create(
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=10,
+        temperature=0.01,  # as close to deterministic as HF allows
+    )
+    result = response.choices[0].message.content.strip().lower()
+    # Validate — fall back to logic_error if model returns something unexpected
+    if result not in ("off_by_one", "logic_error", "partial_solution"):
+        print(f"    [warn] Unexpected response: {result!r} — defaulting to logic_error")
+        result = "logic_error"
+    return result
+
+
+def main():
+    print(f"=== Classification Script ===")
+    print(f"  Model   : {MODEL_NAME}")
+    print(f"  Dataset : {RAW_DIR}")
+    print(f"  Dry run : {DRY_RUN}")
+    print(f"  Max calls: {MAX_CALLS}\n")
+
+    if not os.path.exists(RAW_DIR):
+        print(f"ERROR: Dataset folder not found: {RAW_DIR}")
+        print("Check the RAW_DIR path at the top of this script.")
+        return
+
+    # Only initialise the client if we're doing a real run
+    client = None
+    if not DRY_RUN:
+        print("Connecting to HuggingFace...")
+        client = get_client()
+        print(f"  Client ready: {MODEL_NAME}\n")
+
+    total_calls = 0
+
+    for lang in os.listdir(RAW_DIR):
+        lang_dir = os.path.join(RAW_DIR, lang)
+        if not os.path.isdir(lang_dir):
+            continue
+
+        ext = LANG_EXT.get(lang)
+        if not ext:
+            print(f"  [skip] Unknown language folder: {lang}")
+            continue
+
+        for tier_name in os.listdir(lang_dir):
+            tier_dir = os.path.join(lang_dir, tier_name)
+            if not os.path.isdir(tier_dir):
+                continue
+
+            for problem_id in os.listdir(tier_dir):
+                problem_dir = os.path.join(tier_dir, problem_id)
+                if not os.path.isdir(problem_dir):
+                    continue
+
+                # Read problem statement
+                ps_path = os.path.join(problem_dir, "problem_statement.txt")
+                if not os.path.exists(ps_path):
+                    print(f"  [skip] No problem_statement.txt in {problem_dir}")
+                    continue
+                with open(ps_path, "r", encoding="utf-8", errors="replace") as f:
+                    problem_statement = f.read().strip()
+
+                # Read reference solution (optional)
+                ref_path = os.path.join(problem_dir, f"reference_accepted{ext}")
+                if os.path.exists(ref_path):
+                    with open(ref_path, "r", encoding="utf-8", errors="replace") as f:
+                        reference = f.read().strip()
+                else:
+                    reference = "No reference solution available."
+
+                # Load existing classifications if any (resume after crash)
+                out_path = os.path.join(problem_dir, "classifications.json")
+                if os.path.exists(out_path):
+                    with open(out_path, "r") as f:
+                        classifications = json.load(f)
+                else:
+                    classifications = {}
+
+                # Classify each submission file
+                for fname in sorted(os.listdir(problem_dir)):
+                    if not fname.endswith(ext):
+                        continue
+                    if fname == f"reference_accepted{ext}":
+                        continue  # skip reference file
+                    if total_calls >= MAX_CALLS:
+                        break
+
+                    sid = fname.replace(ext, "")
+
+                    # Skip already classified
+                    if sid in classifications:
+                        print(f"  [skip] Already classified: {lang}/{tier_name}/{problem_id}/{fname}")
+                        continue
+
+                    with open(os.path.join(problem_dir, fname), "r", encoding="utf-8", errors="replace") as f:
+                        code = f.read().strip()
+
+                    prompt = PROMPT_TEMPLATE.format(
+                        problem_statement=problem_statement,
+                        language=lang,
+                        reference=reference,
+                        code=code,
+                    )
+
+                    if DRY_RUN:
+                        print(f"  [DRY RUN] {lang}/{tier_name}/{problem_id}/{fname}")
+                        print(f"    Prompt length : {len(prompt)} chars")
+                        print(f"    First 200 chars:\n    {prompt[:200]}\n")
+                        classifications[sid] = "DRY_RUN"
+                    else:
+                        try:
+                            print(f"  Classifying {lang}/{tier_name}/{problem_id}/{fname}...", end=" ", flush=True)
+                            result = classify(client, prompt)
+                            classifications[sid] = result
+                            print(f"→ {result}")
+                            time.sleep(0.2)  # small delay to avoid rate limits
+                        except Exception as e:
+                            print(f"\n  [error] {fname}: {e}")
+                            continue
+
+                    total_calls += 1
+
+                    # Save after every single classification (crash-safe)
+                    with open(out_path, "w") as f:
+                        json.dump(classifications, f, indent=2)
+
+                if total_calls >= MAX_CALLS:
+                    break
+            if total_calls >= MAX_CALLS:
+                break
+        if total_calls >= MAX_CALLS:
+            break
+
+    print(f"\nDone!")
+    print(f"Total calls made: {total_calls}")
+    if DRY_RUN:
+        print("\nThis was a DRY RUN — no API calls were made.")
+        print("To run for real: set DRY_RUN = False and MAX_CALLS = 2000")
+
+
+if __name__ == "__main__":
+    main()
