@@ -1,7 +1,7 @@
 {
-  "s081291090": "DRY_RUN",
-  "s187595923": "DRY_RUN",
-  "s470019507": "DRY_RUN",
-  "s499691050": "DRY_RUN",
-  "s805071860": "DRY_RUN"
+  "s081291090": "off_by_one",
+  "s187595923": "logic_error",
+  "s470019507": "off_by_one",
+  "s499691050": "logic_error",
+  "s805071860": "off_by_one"
 }

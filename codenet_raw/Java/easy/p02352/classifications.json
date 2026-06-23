@@ -1,4 +1,7 @@
 {
-  "s139834848": "off_by_one",
-  "s348137055": "off_by_one"
+  "s139834848": "logic_error",
+  "s348137055": "logic_error",
+  "s365041765": "logic_error",
+  "s644088484": "logic_error",
+  "s758437665": "logic_error"
 }

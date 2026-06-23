@@ -1,7 +1,7 @@
 {
   "s040826155": "logic_error",
-  "s401421444": "partial_solution",
-  "s768035543": "logic_error",
+  "s401421444": "off_by_one",
+  "s768035543": "off_by_one",
   "s821452722": "logic_error",
   "s970650349": "logic_error"
 }
