@@ -21,7 +21,7 @@ if not HF_TOKEN:
 os.environ["HF_HOME"] = "/localstorage/home/dhruvkumar/f20240533_ps/hf_cache"
 
 # ── Paths & run config ───────────────────────────────────────────────────────
-RAW_DIR   = "/localstorage/home/dhruvkumar/f20240533_ps/PS_Data/codenet_raw"
+RAW_DIR   = "/localstorage/home/dhruvkumar/f20240533_ps/PS_Data/codenet_raw_topup"
 DRY_RUN   = False    # ← keep True for first test, change to False for real run
 MAX_CALLS = 2000
 
