@@ -1,0 +1,190 @@
+Problem F: Two-finger Programming
+
+
+
+Franklin Jenkins is a programmer, but he isn’t good at typing keyboards. So he always uses only ‘f’
+and ‘j’ (keys on the home positions of index fingers) for variable names. He insists two characters are
+enough to write programs, but naturally his friends don’t agree with him: they say it makes programs too
+long.
+
+
+
+He asked you to show any program can be converted into not so long one with the f-j names. Your task
+is to answer the shortest length of the program after all variables are renamed into the f-j names, for each
+given program.
+
+
+
+Given programs are written in the language specified below.
+
+
+
+A block (a region enclosed by curly braces: ‘{’ and ‘}’) forms a scope for variables. Each scope can have
+zero or more scopes inside. The whole program also forms the global scope, which contains all scopes
+on the top level (i.e., out of any blocks).
+
+
+
+Each variable belongs to the innermost scope which includes its declaration, and is valid from the decla-
+ration to the end of the scope. Variables are never redeclared while they are valid, but may be declared
+again once they have become invalid. The variables that belong to different scopes are regarded as differ-
+ent even if they have the same name. Undeclared or other invalid names never appear in expressions.
+
+
+
+The tokens are defined by the rules shown below. All whitespace characters (spaces, tabs, linefeeds, and
+carrige-returns) before, between, and after tokens are ignored.
+
+
+
+token:
+     identifier | keyword | number | operator | punctuation
+identifier:
+     [a-z]+ (one or more lowercase letters)
+keyword:
+     [A-Z]+ (one or more uppercase letters)
+number:
+     [0-9]+ (one or more digits)
+operator:
+     ‘=’ | ‘+’ | ‘-’ | ‘*’ | ‘/’ | ‘&’ | ‘|’ | ‘^’ | ‘<’ | ‘>’
+punctuation:
+     ‘{’ | ‘}’ | ‘(’ | ‘)’ | ‘;’
+
+
+
+
+The syntax of the language is defined as follows.
+
+
+
+program:
+     statement-list
+statement-list:
+     statement
+     statement-list statement
+statement:
+     variable-declaration
+     if-statement
+     while-statement
+     expression-statement
+     block-statement
+variable-declaration:
+      “VAR” identifier ‘;’
+if-statement:
+      “IF” ‘(’ expression ‘)’ block-statement
+while-statement:
+      “WHILE” ‘(’ expression ‘)’ block-statement
+expression-statement:
+      expression ‘;’
+block-statement:
+      ‘{’ statement-listoptional ‘}’
+expression:
+      identifier
+      number
+      expression operator expression
+
+
+
+Input
+
+
+
+The input consists of multiple data sets.
+
+
+
+Each data set gives a well-formed program according to the specification above. The first line contains
+a positive integer N, which indicates the number of lines in the program. The following N lines contain
+the program body.
+
+
+
+There are no extra characters between two adjacent data sets.
+
+
+
+A single line containing a zero indicates the end of the input, and you must not process this line as part
+of any data set.
+
+
+
+Each line contains up to 255 characters, and all variable names are equal to or less than 16 characters
+long. No program contains more than 1000 variables nor 100 scopes (including the global scope).
+
+
+
+
+Output
+
+
+
+For each data set, output in one line the minimum program length after all the variables are renamed into
+the f-j name. Whitespace characters must not counted for the program length. You are not allowed to
+perform any operations on the programs other than renaming the variables.
+
+
+
+
+Sample Input
+
+14
+VAR ga;
+VAR gb;
+IF(ga > gb) {
+  VAR saa;
+  VAR sab;
+  IF(saa > ga) {
+    saa = sab;
+  }
+}
+WHILE(gb > ga) {
+  VAR sba;
+  sba = ga;
+  ga = gb;
+}
+7
+VAR thisisthelongest;
+IF(thisisthelongest / 0) {
+  VARone;
+  one = thisisthelongest + 1234567890123456789012345;
+}
+VAR another;
+32 = another;
+0
+
+
+
+
+Output for the Sample Input
+
+73
+59
+
+
+
+
+
+The two programs should be translated as follows:
+
+
+VAR f;
+VAR ff;
+IF(f > ff) {
+  VAR j;
+  VAR fj;
+  IF(j > f) {
+    j = fj;
+  }
+}
+WHILE(ff > f) {
+  VAR j;
+  j = f;
+  f = ff;
+}
+VAR j;
+IF(j / 0) {
+  VARf;
+  f = j + 1234567890123456789012345;
+}
+VAR f;
+32 = f;

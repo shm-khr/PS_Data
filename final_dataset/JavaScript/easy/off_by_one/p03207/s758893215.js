@@ -1,0 +1,1 @@
+i = require('fs').readFileSync('/dev/stdin', 'utf8').split('\n'), i.shift(), i.sort(), j = i[i.length - 1] / 2, i.shift(), j + i.reduce((x, y) => x + y);
